@@ -1,0 +1,8 @@
+# Podcast DualSub: bilingual Apple Podcasts transcripts (Quantumult X rewrite resource)
+# Add this file's raw URL under Rewrite -> Resource, or paste the lines below into
+# [rewrite_local] / [mitm] of your config.
+# Options go after the script URL, e.g. podcast-dualsub.js#tl=zh-TW&mode=inline
+
+hostname = podcasts.itunes.apple.com
+
+^https:\/\/podcasts\.itunes\.apple\.com\/itunes-assets\/.+\/transcript_\d+\.ttml url script-response-body https://raw.githubusercontent.com/illusion77/podcast-dualsub/main/podcast-dualsub.js

@@ -30,7 +30,7 @@ Raise your hand if you have a friend like this.
    ```
 
 2. Make sure the MitM certificate is installed and trusted (Settings → General → About → Certificate Trust Settings), and that Rewrite and MitM are both on.
-3. Open an episode whose transcript you have **not opened before** and tap Transcript.
+3. Open an episode whose transcript you have **not opened before** and tap Transcript. For episodes you already played, see [below](#episodes-you-played-before-installing-the-script).
 
 The same script runs on Surge / Loon; see the comment at the top of `podcast-dualsub.js` for the config line. On Surge, keep `max-size=0`: transcripts range from a few hundred KB to several MB.
 
@@ -47,22 +47,35 @@ Append them to the script URL (`podcast-dualsub.js#tl=zh-TW&mode=inline`), pass 
 | `concurrency` | `4` | Parallel translation requests |
 | `notify` | `error` | `error`: notify on failure only. `all`: every episode. `none`: never |
 
+## Episodes you played before installing the script
+
+The app downloads each transcript once, caches it locally (`Library/Cache/Assets/TTML`), and never checks the server again. The script only sees transcripts that are actually downloaded, so episodes you had already opened stay English-only. The app also prefetches transcripts for new episodes in your library in the background; if Quantumult X isn't running at that moment, those get cached in English too.
+
+To re-fetch one of them with the script active:
+
+1. If the episode isn't downloaded, download it first (long-press → Download Episode).
+2. Long-press → **Remove Download**. This also deletes the cached transcript.
+3. Force-quit Podcasts from the app switcher (it keeps opened transcripts in memory).
+4. Open the episode's transcript again. It is downloaded fresh and comes back translated.
+
+A rewrite can't do this automatically: the transcript identifier the cache is keyed on comes from `amp-api.podcasts.apple.com`, and the app rejects MitM certificates for that host (certificate pinning), so no proxy can modify those responses.
+
 ## Good to know
 
-- **The app caches transcripts.** Once downloaded, a transcript is stored locally (`Library/Cache/Assets/TTML`) and never requested again, so the script only affects episodes that aren't cached yet. The app also prefetches transcripts for new episodes in your library in the background; if Quantumult X isn't running at that moment, those episodes are cached in English only. The only confirmed way to clear an already-cached transcript is reinstalling the Podcasts app.
 - **Failures fall back to the original.** If some batches fail or time out, the finished sentences are still inserted and you get a notification. If nothing could be translated, the original transcript is returned untouched.
 - Each request carries up to 8,000 characters or 200 sentences. A 15-minute episode needs 2 requests (~0.2 s); a 3.7-hour episode (37k words) needs 26 requests (~1 s), measured on a Mac with a direct connection to Google.
 
 ## What has been verified
 
 Verified:
-- **Request URL**: the transcript URL returned by Apple's AMP API matches the URL in the background download records of Podcasts for Mac (the Catalyst build of the iOS app): `podcasts.itunes.apple.com/itunes-assets/…/transcript_<id>.ttml`.
+- **On iPhone with Quantumult X**: new episodes show bilingual transcripts.
+- **End to end with real app traffic**: Podcasts for Mac (the Catalyst build of the iOS app) was run through mitmproxy with an addon that applies the same rewrite rule and runs this script the way Quantumult X does. The app downloaded transcripts from `podcasts.itunes.apple.com/itunes-assets/…/transcript_<id>.ttml`, accepted the MitM certificate for that host, and displayed the rewritten transcript in both languages. The sample at the top is what it showed.
+- **Pinning**: the app rejects MitM certificates for `amp-api.podcasts.apple.com`, even when they are trusted.
+- **Cache behavior**: opening a cached transcript makes no network request. Removing an episode's download deletes its cached transcript, and the next open re-downloads it (see the workaround above).
 - **Real transcripts** (both Apple-generated and creator-provided): output is well-formed XML in all three modes, and every original word is kept in order.
-- **Rendering**: with the `stack` output swapped into the Podcasts for Mac cache, the Transcript view displays both languages; the sample at the top is what the app showed.
 - **Engine**: the script runs under JavaScriptCore, the engine Quantumult X uses.
 
-Not verified (no iOS device available):
-- Whether Quantumult X can MitM `podcasts.itunes.apple.com`. Certificate pinning would block it, though that seems unlikely.
+Not verified:
 - Word highlighting during playback on iOS. The Mac Transcript view doesn't highlight at all, so it couldn't be tested. If highlighting misbehaves, use `timing=end`.
 - How `inline` and `only` look in the app. They use the same markup as `stack` but weren't checked on screen.
 
